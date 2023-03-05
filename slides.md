@@ -309,7 +309,7 @@ error: the feature `core_ffi_c` has been stable since 1.64.0
 
 ### Module definieren
 
-```
+```rust
 use kernel::prelude::*;
 
 module! {
@@ -325,7 +325,7 @@ module! {
 
 ### Implementierung
 
-```
+```rust
 struct RustCltModule;
 
 impl kernel::Module for RustCltModule {
