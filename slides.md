@@ -1,10 +1,10 @@
 ## Rust im Linux Kernel
 
+<img src="media/Rust_for_Linux_logo.svg" alt="Logo Rust For Linux" width="30%"/>
+
 Alexander Böhm
 
-Chemnitzer Linux Tage
-
-11.03.2023
+Chemnitzer Linux Tage, 11.03.2023
 
 ---
 
@@ -12,47 +12,92 @@ Chemnitzer Linux Tage
 
 * Kein Kernel-Entwickler \
   kleine Anpassungen, Spielereien, Experimente
-* Früher hauptsächlich Python, C/C++, Java
-* Seit 2017 zaghafte Versuche mit Rust
-* Seit 1.5y Rust auf Arbeit: Backend
+* Früher hauptsächlich Python, Java, C/C++
+* 2017 zaghafte Versuche mit Rust
+* Seit 1.5y täglich Rust
 
 ---
 
-## Adaption
+## Sprachverteilung 
+
+<img src="media/github-torvalds-linux-statistic.png" alt="C 98.5%, Assembly 0.8%" />
+
+
+<small>
+
+*Quelle: https://github.com/torvalds/linux, (4.3.23)*
+
+</small>
 
 ---
 
-### Stackoverflow
+### Neben C & Assembler
 
-Developer Survey 2022:
-
-> Rust is on its seventh year as the most loved language with 87% of developers saying they want to continue using it.
-
----
-
-### Microsoft
-
-Mark Russinovich (CTO Microsoft Azure):
-
-> Es ist Zeit, damit aufzuhören, neue Projekte in C/C++ zu starten und stattdessen Rust für die Szenarien zu verwenden
+* Vereinzelte Projekte mit C++ und Ada
+* Out Of Tree Entwicklungen
+* 2006 Diskussion über C++: \
+  Absage von diversen Kernel Maintainern
 
 ---
 
-### Google
+### Gründe gegen C++
 
-Google Security Blog: Rust in Android 13
+* Komplexität Objekt-Orientierung
+* Behandlung Sprachfunktionen? \
+  Exceptions, Constructor, ...
+* Unzureichende Kompilerunterstützung
+* Strittige Kompatiblität mit C
+* Kernel-Infrastruktur
 
-> To date, there have been zero memory safety vulnerabilities discovered in Android’s Rust code.
+---
 
---- 
+## Sicherheit
 
-#### Weiter Beispiele
+<img src="media/mitre-cve-list-linux-kernel.png" alt="Liste von CVEs" />
 
-* GCCRS: Rust Frontend für GCC
-* uutils: Reimplementierung coreutils
-* rPGP: OpenPGP
-* AWS Firecracker: microVM
-* Servo: Browser-Engine
+<small>
+
+*Quelle: cve.mitre.org, linux kernel (4.3.23)*
+
+</small>
+
+---
+
+## Rust
+
+---
+
+### Geschichte
+
+* Entstanden bei Mozilla 2009: \
+  C/C++ zwar schnell, aber fehleranfällig
+* Anforderung: \
+  Einfache & sicher **Parallelisierung**
+* LLVM-Kompiler
+* 1. stabiles Release 2015
+* Entwicklung hin zu systemnahen Use Cases
+
+---
+
+### Eigenschaften
+
+* Strenge Typisierung
+* Hohe Speichersicherheit
+* Keine Garbage Collection
+* Zero-Cost Abstraction
+* Vergleichbare C/C++-Leistung
+* Anbindung zu C
+
+---
+
+### Konzepte
+
+* Traits, Generics, Optionals, Results
+* Ownership & Lifetime Checks
+* Macros
+* Variable sind per default nicht veränderbar
+* Panic Handler
+* `unsafe` Code (C Interoperabilität)
 
 ---
 
@@ -76,88 +121,11 @@ Asahi Lina (M1 DRM Developer):
 
 ---
 
-## C++ im Linux Kernel
-
-* 2006 Diskussion über C++
-* Absage von diversen Kernel Maintainern
+## Verbesserungen
 
 ---
 
-### Gründe
-
-* Komplexität durch Objekt-Orientierung
-* Umgang Sprachfunktionen \
-  (Exceptions, Constructor, ...)
-* Unzureichende Kompilerunterstützung
-* Strittige Kompatiblität mit C
-* Zusatzaufwand für Kernel-Infrastruktur
-* Zusätzliche Abhängigkeiten
-
----
-
-## Motivation
-
----
-
-<img src="media/github-torvalds-linux-statistic.png" alt="C 98.5%, Assembly 0.8%" />
-
-*Quelle: https://github.com/torvalds/linux, (4.3.23)*
-
----
-
-<img src="media/mitre-cve-list-linux-kernel.png" alt="List von CVEs des Linux-Kernels" />
-
-*Quelle: cve.mitre.org, linux kernel (4.3.23)*
-
----
-
-## Infrastruktur
-
-Voraussetzungen
-
-* Clang
-
----
-
-## Rust
-
----
-
-### Geschichte
-
-* Entstanden bei Mozilla 2009
-* 1stes stabiles Release 2015
-* Sichere Parallelisierung Aufgaben
-* C/C++ zwar schnell, aber fehleranfällig
-* Entwicklung hin zu systemnahen Use Cases
-
----
-
-### Eigenschaften
-
-* Strenge Typisierung
-* Speichersicherheit ohne Garbage Collection
-* Nebenläufigkeit bei Vermeidung von Race Conditions
-* Zero-Cost Abstraction
-* Anbindung zu C
-
----
-
-### Konzepte
-
-* Keine Objekt-Orientierung
-* Traits & Generics
-* Ownership für Ressourcen (Borrow-Checker)
-* Lifetimes für Ressourcen (Lifetime-Checker)
-* Macros
-* Variable sind per default nicht veränderbar
-* Markierung von unsicheren Code
-
----
-
-### Stack-based Buffer Overflow
-
-[CVE-2022-4378](https://seclists.org/oss-sec/2022/q4/178)
+### Stack-based Pointer Leakage
 
 ---
 
@@ -176,10 +144,9 @@ int* return_freed_stack() {
 Führt zu Warnung im GCC
 
 ```text
-warning: function returns address of local variable [-Wreturn-local-addr]
+warning: function returns address of local variable 
+         [-Wreturn-local-addr]
 ```
-
-*Aber:* Standardmäßig kein Error, erhalte Kompilat
 
 ---
 
@@ -206,31 +173,89 @@ error[E0106]: missing lifetime specifier
   |
   = help: this function's return type contains a borrowed 
     value, but there is no value for it to be borrowed from
-help: consider using the `'static` lifetime
 ```
+
 ---
 
-### Use after free
-
-* Alloziiere Speicherbereich
-* Verwende Speicher
-* Gebe Speicherbereich wieder frei
-* Referenzen werden vergessen zu allozieren
+### Stack-based Buffer Overflow
 
 ---
 
 #### C
 
 ```c
-void do_something(int value) {
+int my_stack_smash() {
+    // Puffer auf dem Stack
+    char buf[8] = { 0 };
+    // Funktion, die den Puffer manipuliert 💣
+    read_something(buf);
+    return strncmp(buf, "true", sizeof(buf));
+}
+
+void read_something(char* value) {
+    // Zu großer Puffer
+    char* ups[256];
+    // Überschreibe Stack-Grenzen 💥
+    memcpy(value, ups, sizeof(ups));
+}
+```
+
+Kompilierung ohne Probleme \
+→ Programmabsturz mit `segfault`
+
+---
+
+#### Rust
+
+```rust
+use core::str::from_utf8;
+
+fn my_stack_smash() -> i32 {
+    let mut buf = [0u8; 8];
+    read_something(&mut buf);
+    if from_utf8(&buf).unwrap() == "true" { 1 } else { 0 }
+}
+
+fn read_something(value: &mut [u8]) {
+    let buf = [0u8; 256];
+    // Überschreibe Stack-Grenzen 💥
+    value.copy_from_slice(&buf);
+}
+```
+
+Kompilierung ohne Probleme \
+→ Programmabsturz mit Panic Handler
+
+```
+thread 'main' panicked at 'source slice length (256) does
+not match destination slice length (8)', src/main.rs:11:11
+```
+
+---
+
+### Use after free
+
+---
+
+#### C
+
+```c
+// Rufe Funktion `do_something(-1)`
+void* do_something(int value) {
+    // Alloziiere Puffer
     void* buf = malloc(1024);
-    if (value < 0) { free(buf); }
+    if (value < 0) {
+        free(buf);
+        // Bug: return NULL vergessen
+    }
+    // Schreibe in Puffer
     memcpy(buf, &value, sizeof(value));
+    // Gebe Pointer auf freien Speicher zurück
     return buf;
 }
 ```
 
-GCC kompiliert ohne Fehler/Warnungen:
+*GCC kompiliert ohne Fehler/Warnungen*
 
 ---
 
@@ -238,14 +263,22 @@ GCC kompiliert ohne Fehler/Warnungen:
 
 ```rust
 fn do_something(value: i32) -> Vec<u8> {
+    // Alloziiere Puffer
     let mut buf = Vec::with_capacity(1024);
-    if value < 0 { drop(buf); }
+    if value < 0 {
+        // Gebe explizit Speicher frei
+        drop(buf);
+    }
+    // Schreibe in Puffer
     buf.copy_from_slice(&value.to_be_bytes());
+    // Gebe Pointer auf freien Speicher zurück
     return buf;
 }
 ```
 
-Kompilerfehler:
+---
+
+*Kompilerfehler*
 
 ```rust
 error[E0382]: borrow of moved value: `buf`
@@ -263,16 +296,108 @@ error[E0382]: borrow of moved value: `buf`
 
 ---
 
-## Nachteile
+*Lösung die kompiliert wird*
 
-### LLVM
-
-* Rust basiert auf LLVM
-* Rust Compiler in C++
+```rust
+fn do_something(value: i32) -> Option<Vec<u8>> {
+    let mut buf = Vec::with_capacity(1024);
+    if value < 0 {
+        buf.copy_from_slice(&value.to_be_bytes());
+        Some(buf)
+    } else {
+        None
+    }
+}
+```
 
 ---
 
-### Zz. starke Versionsbhängigkeit 
+## Weg in den Kernel
+
+---
+
+### Die Anfänge
+
+* 2012 LLVM Linux und Clang-Support
+* 2020 Linux Plumbers Conference: \
+  Vorschlag zum In-Tree Support von Rust
+
+---
+
+### Die Idee
+
+![Rust Module Design](media/rust-module-design.png)
+
+<small>
+
+*Quelle: [Rust for Linux, Miguel Ojeda, Wedson Almeida Filho (März 2022)](https://www.youtube.com/watch?v=fVEeqo40IyQ&list=PL85XCvVPmGQgL3lqQD5ivLNLfdAdxbE_u)*
+
+</small>
+
+---
+
+### 6.1 LTS Kernel
+
+* Mitte Dezember 2022
+* Minimales Kernelmodul
+* Infrastruktur
+
+---
+
+![Rust Crate Infrastruktur](media/rust-infrastructure.png)
+
+<small>
+
+*Quelle: [Rust for Linux, Miguel Ojeda, Wedson Almeida Filho (März 2022)](https://www.youtube.com/watch?v=fVEeqo40IyQ&list=PL85XCvVPmGQgL3lqQD5ivLNLfdAdxbE_u)*
+
+</small>
+
+---
+
+### 6.2er Kernel
+
+* 20. Feburar 2023
+* String-Behandlung
+* Formater
+* VTables-Unterstützung
+
+---
+
+### Aktuelle Entwicklungen
+
+* netfilter
+* Moduleparameter
+* Dateisystemanbindung
+* TCP-Server
+* Einfache Treiber (Char/Misc Device)
+* Arc-Datentyp (Asynchronous Resource Counter)
+* Synchronisationsprimitive (Mutex, Semaphore)
+
+---
+
+## Erstes Kernelmodul
+
+---
+
+### Vorbereitung
+
+* Rust Abhängigkeiten
+
+```sh
+rustup override set 1.66.0
+rustup component add rust-src
+cargo install --locked --version 0.56.0 bindgen
+```
+
+* LLVM/Clang Abhängigkeiten
+
+```
+apt-get install -y clang-11 lld-11 llvm-11
+```
+
+---
+
+### ⚠️  Starke Versionsbhängigkeit ⚠️ 
 
 * Meist abgestimmt auf konkrete Rust-Version
 
@@ -283,7 +408,7 @@ error[E0382]: borrow of moved value: `buf`
 ***   Expected version: 1.62.0
 ```
 
-* Führt teilweise zu Fehlern mit falscher Version
+* Führt teilweise zu Fehlern
 
 ```text
 error: the feature `core_ffi_c` has been stable since 1.64.0
@@ -292,18 +417,15 @@ error: the feature `core_ffi_c` has been stable since 1.64.0
 
 ---
 
-## Aktueller Stand
+### Rust Support aktivieren
 
-* `async` Executor
-* TCP-Server
-* Synchronisations Primitive \
-  (Arc, Mutex, Spinlock, CondVar)
-* netfilter
-* Rumpf-Implementierung für Dateisysteme
+![General Setup -> Rust Support](media/linux-config-enable-rust.png)
 
 ---
 
-## Einfacher Beispiel
+### Beispiele aktivieren
+
+![Kernel hacking -> Sample kernel code -> Rust samples](media/linux-config-enable-rust-sample.png)
 
 ---
 
@@ -341,9 +463,27 @@ impl kernel::Module for RustCltModule {
 
 ---
 
+### Kernel bauen
+
+```
+make LLVM=1 bzImage modules
+```
+
+---
+
+## Aussicht
+
+* Keine Kernel-Reimplementierung
+* Abstimmungen mit Rust-Kompiler
+* Offene Fragen bzgl. Distribution \
+  (Versionsabhängigkeiten)
+
+---
+
 ## Projekte
 
-* GPU Treiber für M1 (Asahi Linux)
+* Android IPC Binder
+* [GPU Treiber für M1 (Asahi Linux)](https://asahilinux.org)
 * [NVM Express Treiber](https://github.com/metaspace/linux/tree/nvme)
 * [9p Server](https://github.com/wedsonaf/linux/commits/9p)
 
@@ -351,10 +491,15 @@ impl kernel::Module for RustCltModule {
 
 ## Quellen/Referenzen
 
-* https://github.com/Rust-for-Linux/linux/tree/rust/Documentation/rust
+* [Rust For Linux](https://github.com/Rust-for-Linux/linux/tree/rust/Documentation/rust)
+* [LKML: Vorschlag für Unterstützung von "in-tree" Rust Support](https://lore.kernel.org/lkml/CAKwvOdmuYc8rW_H4aQG4DsJzho=F+djd68fp7mzmBp3-wY--Uw@mail.gmail.com/T/#u)
 * [Google Security Blog: Memory Safe Languages in Android 13](https://security.googleblog.com/2022/12/memory-safe-languages-in-android-13.html)
 * [Linus Torvalds über C++ Pushbacks](http://www.uwsg.indiana.edu/hypermail/linux/kernel/0604.3/0964.html)
 * [Stackoverflow Developer Survey 2022](https://survey.stackoverflow.co/2022/)
 * [LWN: A first look at Rust in the 6.1 kernel](https://lwn.net/Articles/910762/)
 * [LWN: A pair of Rust kernel modules](https://lwn.net/Articles/907685/)
 * [Asahi Linux: Tales of the M1 GPU](https://asahilinux.org/2022/11/tales-of-the-m1-gpu/)
+* [How Rust supports the Linux Kernel](https://www.youtube.com/watch?v=1R6CxuUwA7E)
+* [Rust for Linux by Miguel Ojeda and Wedson Almeida Filho - Rust Linz, March 2022](https://www.youtube.com/watch?v=fVEeqo40IyQ)
+* [Rust for Linux: Status and Wishlist](https://www.youtube.com/watch?v=fVEeqo40IyQ&list=PL85XCvVPmGQgL3lqQD5ivLNLfdAdxbE_u)
+* [Rust for Linux, Rust CTCFT 2021](https://rust-lang.github.io/ctcft/slides/2021-11-22_-_Rust_CTCFT_-_Rust_for_Linux.pdf)
