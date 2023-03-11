@@ -11,8 +11,8 @@ Chemnitzer Linux Tage, 11.03.2023
 ## Zu mir
 
 * Kein Kernel-Entwickler \
-  kleine Anpassungen, Spielereien, Experimente
-* Früher hauptsächlich Python, Java, C/C++
+  kleine Anpassungen & Experimente
+* Python, Java, C/C++
 * 2017 zaghafte Versuche mit Rust
 * Seit 1.5y täglich Rust
 
@@ -34,7 +34,7 @@ Chemnitzer Linux Tage, 11.03.2023
 ### Neben C & Assembler
 
 * Vereinzelte Projekte mit C++ und Ada
-* Out Of Tree Entwicklungen
+* Out-Of-Tree Entwicklungen
 * 2006 Diskussion über C++: \
   Absage von diversen Kernel Maintainern
 
@@ -47,11 +47,11 @@ Chemnitzer Linux Tage, 11.03.2023
   Exceptions, Constructor, ...
 * Unzureichende Kompilerunterstützung
 * Strittige Kompatiblität mit C
-* Kernel-Infrastruktur
+* Notwendige Kernel-Infrastruktur
 
 ---
 
-## Sicherheit
+### Sicherheitsaspekte
 
 <img src="media/mitre-cve-list-linux-kernel.png" alt="Liste von CVEs" />
 
@@ -63,45 +63,7 @@ Chemnitzer Linux Tage, 11.03.2023
 
 ---
 
-## Rust
-
----
-
-### Geschichte
-
-* Entstanden bei Mozilla 2009: \
-  C/C++ zwar schnell, aber fehleranfällig
-* Anforderung: \
-  Einfache & sicher **Parallelisierung**
-* LLVM-Kompiler
-* 1. stabiles Release 2015
-* Entwicklung hin zu systemnahen Use Cases
-
----
-
-### Eigenschaften
-
-* Strenge Typisierung
-* Hohe Speichersicherheit
-* Keine Garbage Collection
-* Zero-Cost Abstraction
-* Vergleichbare C/C++-Leistung
-* Anbindung zu C
-
----
-
-### Konzepte
-
-* Traits, Generics, Optionals, Results
-* Ownership & Lifetime Checks
-* Macros
-* Variable sind per default nicht veränderbar
-* Panic Handler
-* `unsafe` Code (C Interoperabilität)
-
----
-
-### Kernel Developer
+### Kernel Developer zu Rust
 
 ---
 
@@ -119,121 +81,44 @@ Asahi Lina (M1 DRM Developer):
 
 > Rust is truly magical! [...] It really guides you towards not just safe but good design.
 
+
+---
+
+## Rust
+
+---
+
+### Geschichte
+
+* Entstanden bei Mozilla 2009: \
+  C/C++ zwar schnell, aber fehleranfällig
+* Einfache & sichere **Parallelisierung**
+* LLVM-Kompiler
+* 1. stabiles Release 2015
+* systemnahe Entwicklungen
+
+---
+
+### Eigenschaften
+
+* Strenge Typisierung
+* Hohe Speichersicherheit
+* Keine Garbage Collection
+* Zero-Cost Abstraction
+* Vergleichbare C/C++-Leistung
+* Anbindung zu C
+
+---
+
+### Konzepte
+
+<img src="media/concepts-wordcloud.svg" alt="Wordcloud mit Konzepten">
+
 ---
 
 ## Verbesserungen
 
----
-
-### Stack-based Pointer Leakage
-
----
-
-#### C
-
-```c
-int* return_freed_stack() {
-    // Wert wird auf Stack alloziiert
-    int value = 42; 
-    // Pointer zu value auf Stack
-    return &value;
-    // Stack wird abgeräumt
-} // Rückgabe Pointer zeigt auf abgeräumten Stack 💥
-```
-
-Führt zu Warnung im GCC
-
-```text
-warning: function returns address of local variable 
-         [-Wreturn-local-addr]
-```
-
----
-
-#### Rust
-
-```rust
-fn return_freed_stack() -> &i32 {
-    // Variable auf dem Stack
-    let value: i32 = 42;
-    // Gebe Referenz auf Variable auf den Stack
-    &value
-    // Stack wird abgeräumt
-}
-```
-
-Kompilierung scheitert:
-
-```rust
-error[E0106]: missing lifetime specifier
- --> stack-test.rs:1:24
-  |
-1 | fn smash_my_stack() -> &i32 {
-  |                        ^ expected named lifetime parameter
-  |
-  = help: this function's return type contains a borrowed 
-    value, but there is no value for it to be borrowed from
-```
-
----
-
-### Stack-based Buffer Overflow
-
----
-
-#### C
-
-```c
-int my_stack_smash() {
-    // Puffer auf dem Stack
-    char buf[8] = { 0 };
-    // Funktion, die den Puffer manipuliert 💣
-    read_something(buf);
-    return strncmp(buf, "true", sizeof(buf));
-}
-
-void read_something(char* value) {
-    // Zu großer Puffer
-    char* ups[256];
-    // Überschreibe Stack-Grenzen 💥
-    memcpy(value, ups, sizeof(ups));
-}
-```
-
-Kompilierung ohne Probleme \
-→ Programmabsturz mit `segfault`
-
----
-
-#### Rust
-
-```rust
-use core::str::from_utf8;
-
-fn my_stack_smash() -> i32 {
-    let mut buf = [0u8; 8];
-    read_something(&mut buf);
-    if from_utf8(&buf).unwrap() == "true" { 1 } else { 0 }
-}
-
-fn read_something(value: &mut [u8]) {
-    let buf = [0u8; 256];
-    // Überschreibe Stack-Grenzen 💥
-    value.copy_from_slice(&buf);
-}
-```
-
-Kompilierung ohne Probleme \
-→ Programmabsturz mit Panic Handler
-
-```
-thread 'main' panicked at 'source slice length (256) does
-not match destination slice length (8)', src/main.rs:11:11
-```
-
----
-
-### Use after free
+* Beispiel: Use after free
 
 ---
 
@@ -250,7 +135,7 @@ void* do_something(int value) {
     }
     // Schreibe in Puffer
     memcpy(buf, &value, sizeof(value));
-    // Gebe Pointer auf freien Speicher zurück
+    // Gebe Pointer zurück
     return buf;
 }
 ```
@@ -263,7 +148,7 @@ void* do_something(int value) {
 
 ```rust
 fn do_something(value: i32) -> Vec<u8> {
-    // Alloziiere Puffer
+    // Alloziiere Puffer auf veränderlicher Variable
     let mut buf = Vec::with_capacity(1024);
     if value < 0 {
         // Gebe explizit Speicher frei
@@ -271,7 +156,7 @@ fn do_something(value: i32) -> Vec<u8> {
     }
     // Schreibe in Puffer
     buf.copy_from_slice(&value.to_be_bytes());
-    // Gebe Pointer auf freien Speicher zurück
+    // Gebe Pointer zurück
     return buf;
 }
 ```
@@ -296,15 +181,17 @@ error[E0382]: borrow of moved value: `buf`
 
 ---
 
-*Lösung die kompiliert wird*
+*Lösung erfordert Umbau*
 
 ```rust
 fn do_something(value: i32) -> Option<Vec<u8>> {
     let mut buf = Vec::with_capacity(1024);
     if value < 0 {
         buf.copy_from_slice(&value.to_be_bytes());
+        // Übergebe Ownership von `buf` als Rückgabe
         Some(buf)
     } else {
+        // Gebe `buf` frei, da Scope verlassen wird
         None
     }
 }
@@ -356,7 +243,7 @@ fn do_something(value: i32) -> Option<Vec<u8>> {
 
 ### 6.2er Kernel
 
-* 20. Feburar 2023
+* Mitte Feburar 2023
 * String-Behandlung
 * Formater
 * VTables-Unterstützung
@@ -370,7 +257,7 @@ fn do_something(value: i32) -> Option<Vec<u8>> {
 * Dateisystemanbindung
 * TCP-Server
 * Einfache Treiber (Char/Misc Device)
-* Arc-Datentyp (Asynchronous Resource Counter)
+* Asynchronous Resource Counter
 * Synchronisationsprimitive (Mutex, Semaphore)
 
 ---
@@ -384,7 +271,7 @@ fn do_something(value: i32) -> Option<Vec<u8>> {
 * Rust Abhängigkeiten
 
 ```sh
-rustup override set 1.66.0
+rustup override set 1.62.0
 rustup component add rust-src
 cargo install --locked --version 0.56.0 bindgen
 ```
@@ -429,34 +316,49 @@ error: the feature `core_ffi_c` has been stable since 1.64.0
 
 ---
 
-### Module definieren
+### Modul definieren
 
 ```rust
+// SPDX-License-Identifier: GPL-2.0
+//! Rust module for CLT 2023
 use kernel::prelude::*;
 
 module! {
     type: RustCltModule,
     name: "rust_clt_module",
-    author: "Rust for Linux Contributors",
+    author: "Alexander Böhm",
     description: "Rust Module for CLT 2023",
     license: "GPL v2",
 }
+
+struct RustCltModule { name: &'static CStr }
 ```
 
 ---
 
-### Implementierung
+### Initialisierung implementieren
 
 ```rust
-struct RustCltModule;
-
 impl kernel::Module for RustCltModule {
     fn init(
         name: &'static CStr,
         _module: &'static ThisModule
     ) -> Result<Self> {
-        pr_info!("Hello from kernel module {name}!");
-        Ok(Self {})
+        pr_info!("Hello CLT 2023 from kernel module {name}!");
+        Ok(Self { name })
+    }
+}
+```
+
+---
+
+### Unloading implementieren
+
+```rust
+impl Drop for RustCltModule {
+    fn drop(&mut self) {
+        pr_info!("Goodbye from kernel module {}!",
+                 self.name);
     }
 }
 ```
@@ -471,21 +373,79 @@ make LLVM=1 bzImage modules
 
 ---
 
-## Aussicht
+### Modul ausprobieren
 
-* Keine Kernel-Reimplementierung
-* Abstimmungen mit Rust-Kompiler
-* Offene Fragen bzgl. Distribution \
-  (Versionsabhängigkeiten)
+```
+[    1.023889] rust_clt_module: Hello CLT 2023 from kernel 
+               module rust_clt_module!
+[    1.025889] rust_clt_module: Goodbye from kernel module
+               rust_clt_module!
+```
 
 ---
 
-## Projekte
+## Aussicht & TODOs
+
+---
+
+### Kernel
+
+* Keine Reimplementierung
+* Weitere Abstraktionen für Subsysteme
+* Testing
+* Tooling & Infrastruktur
+* Offene Fragen bzgl. Distribution
+* Weitere Architekturen (aarch64)
+
+---
+
+#### Aussichtsreiche Module
 
 * Android IPC Binder
 * [GPU Treiber für M1 (Asahi Linux)](https://asahilinux.org)
 * [NVM Express Treiber](https://github.com/metaspace/linux/tree/nvme)
 * [9p Server](https://github.com/wedsonaf/linux/commits/9p)
+
+---
+
+### Für Rust
+
+* Abstimmung
+* Eigene Primitive (bspw. `Arc`)
+* Kompiler-Anpassung
+
+---
+
+### GCCRS
+
+<img src="media/gccrs-logo.png" width="33%">
+
+* Frontend für GCC
+* Erste experimentele Version \
+  für GCC 13.1
+* 2023:  Test Suite v1.49 bestehen
+* Kein Borrow-Checker
+* Ermöglicht mehr Architekturen
+* Zugriff auf GCC-Tooling
+
+---
+
+## Fazit
+
+* Rust ist im Kernel angelangt
+* Schnelle Entwicklung
+* Potentiale für sicheren Code
+* Zahlreiche offene Themen
+
+<small>
+<br/>
+<br/>
+<br/>
+
+Folien & Beispiele:
+[https://github.com/aboehm/CLT2023-rust-im-linux-kernel](aboehm/CLT2023-rust-im-linux-kernel)
+
+</small>
 
 ---
 
@@ -503,3 +463,5 @@ make LLVM=1 bzImage modules
 * [Rust for Linux by Miguel Ojeda and Wedson Almeida Filho - Rust Linz, March 2022](https://www.youtube.com/watch?v=fVEeqo40IyQ)
 * [Rust for Linux: Status and Wishlist](https://www.youtube.com/watch?v=fVEeqo40IyQ&list=PL85XCvVPmGQgL3lqQD5ivLNLfdAdxbE_u)
 * [Rust for Linux, Rust CTCFT 2021](https://rust-lang.github.io/ctcft/slides/2021-11-22_-_Rust_CTCFT_-_Rust_for_Linux.pdf)
+* [Heise: Three Questions and Answers: Rust for Linux](https://www.heise.de/hintergrund/Three-Questions-and-Answers-Rust-for-Linux-7532262.html)
+* [GCCRS Kompiler](https://github.com/Rust-GCC/gccrs)
