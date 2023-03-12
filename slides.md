@@ -187,12 +187,12 @@ error[E0382]: borrow of moved value: `buf`
 fn do_something(value: i32) -> Option<Vec<u8>> {
     let mut buf = Vec::with_capacity(1024);
     if value < 0 {
+        // Gebe `buf` frei, da Scope verlassen wird
+        None
+    } else {
         buf.copy_from_slice(&value.to_be_bytes());
         // Übergebe Ownership von `buf` als Rückgabe
         Some(buf)
-    } else {
-        // Gebe `buf` frei, da Scope verlassen wird
-        None
     }
 }
 ```
