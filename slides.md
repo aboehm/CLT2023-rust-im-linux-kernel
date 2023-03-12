@@ -25,7 +25,7 @@ Chemnitzer Linux Tage, 11.03.2023
 
 <small>
 
-*Quelle: https://github.com/torvalds/linux, (4.3.23)*
+*Quelle: https://github.com/torvalds/linux, (Datum 4.3.23)*
 
 </small>
 
@@ -57,7 +57,7 @@ Chemnitzer Linux Tage, 11.03.2023
 
 <small>
 
-*Quelle: cve.mitre.org, linux kernel (4.3.23)*
+*Quelle: cve.mitre.org, linux kernel (Datum 4.3.23)*
 
 </small>
 
